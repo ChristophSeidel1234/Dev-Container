@@ -31,5 +31,5 @@ COPY --from=python-base /usr/lib/R /usr/lib/R
 EXPOSE 8080 8888
 
 # Start both Code-Server and Jupyter
-CMD ["sh", "-c", "tini -g -- code-server --bind-addr 0.0.0.0:8080 --auth none & \
+CMD ["sh", "tini -g -- code-server --bind-addr 0.0.0.0:8080 --auth none & \
                    jupyter notebook --ip=0.0.0.0 --no-browser --allow-root --port=8888"]
