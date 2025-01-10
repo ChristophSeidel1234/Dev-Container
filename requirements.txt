@@ -3,4 +3,5 @@ numpy
 pandas
 matplotlib
 seaborn
-scipy
+jupyter 
+jupyter_core

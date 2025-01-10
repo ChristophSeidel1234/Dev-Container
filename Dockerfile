@@ -8,24 +8,65 @@ ENV PYTHONUNBUFFERED=1 \
 # Install basic system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
-    r-base \
-    tini \
+    libpython3.11 \
+    libpython3.11-dev \
     curl \
+    git \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
+
+# Installiere Pip, falls es nicht schon da ist
+RUN curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py \
+    && python get-pip.py \
+    && rm get-pip.py
+
+# Setze Arbeitsverzeichnis für Code
+WORKDIR /home/coder
 
 # Install Python dependencies
 COPY requirements.txt /tmp/requirements.txt
 RUN pip install --no-cache-dir -r /tmp/requirements.txt
 
-# -----------------------------------------------------------------------------
+# Stage 2: Jupyter-basierte Umgebung
+FROM jupyter/base-notebook:latest AS jupyter-base
 
-# Base Image for Code-Server
+# Kopiere Python-Pakete und Abhängigkeiten aus Stage 1
+COPY --from=python-base /usr/local/lib/python3.11 /usr/local/lib/python3.11
+COPY --from=python-base /usr/local/bin /usr/local/bin
+
+# Installiere zusätzliche Abhängigkeiten für Jupyter und R
+USER root
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    r-base \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Nutzer zurücksetzen
+USER $NB_UID
+
+# Stage 3: Finales Image mit Code-Server
 FROM codercom/code-server:latest AS code-server-base
 
-# Copy Python and Jupyter setup from python-base
+# Kopiere Pip von python-base Stage
 COPY --from=python-base /usr/local /usr/local
-COPY --from=python-base /usr/lib/R /usr/lib/R
+
+# Kopiere Python- und Jupyter-Umgebungen aus den vorherigen Stages
+COPY --from=jupyter-base /usr/local /usr/local
+COPY --from=jupyter-base /home/jovyan /home/coder
+
+# Erstelle und setze ein Volume, das Pakete persistent speichert
+VOLUME /home/coder/.local
+
+# Stelle sicher, dass der Benutzer coder Zugriff auf /home/coder/.local hat
+RUN mkdir -p /home/coder/.local && chown -R coder:coder /home/coder/.local
+
+# Installiere zusätzliche Abhängigkeiten für Code-Server
+USER root
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libsqlite3-dev \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Nutzer zurücksetzen
+USER coder
 
 # Expose required ports
 EXPOSE 8080 8888
