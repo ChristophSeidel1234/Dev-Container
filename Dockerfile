@@ -7,6 +7,7 @@ ENV PYTHONUNBUFFERED=1 \
 
 # Install basic system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl gnupg build-essential \
     build-essential \
     libpython3.11 \
     libpython3.11-dev \
@@ -14,6 +15,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
+
+# Füge NVIDIA-Repository hinzu
+RUN curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg && \
+    curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list | \
+    sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | \
+    tee /etc/apt/sources.list.d/nvidia-container-toolkit.list && \
+    apt-get update && \
+    apt-get install -y nvidia-container-toolkit && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Installiere Pip, falls es nicht schon da ist
 RUN curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py \

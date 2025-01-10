@@ -4,4 +4,3 @@ pandas
 matplotlib
 seaborn
 jupyter 
-jupyter_core
